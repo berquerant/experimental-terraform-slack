@@ -1,0 +1,200 @@
+# https://swagger.io/specification/v2/
+swagger: "2.0"
+info:
+  # NOTE: Affects the API server binary name
+  title: Slack API for Terraform provider
+  version: 0.1.0
+host: 127.0.0.1:8030
+basePath: /v0
+schemes:
+  - http
+consumes:
+  - application/json
+produces:
+  - application/json
+tags:
+  - name: health
+    description: Health check
+  - name: channel
+    description: Manage channels
+paths:
+  /health:
+    get:
+      tags:
+        - health
+      summary: Check server alive
+      operationId: checkAlive
+      responses:
+        '200':
+          description: Alive
+          schema:
+            $ref: '#/definitions/HealthModel'
+  /channel:
+    get:
+      tags:
+        - channel
+      summary: Fetch a channel
+      operationId: fetchChannel
+      parameters:
+        - name: id
+          in: query
+          type: string
+          description: channel id
+          required: true
+      responses:
+        '200':
+          description: Success
+          schema:
+            $ref: '#/definitions/ChannelModel'
+        default:
+          description: Error
+          schema:
+            $ref: '#/definitions/ErrorModel'
+    post:
+      tags:
+        - channel
+      summary: Create a new channel
+      operationId: createChannel
+      parameters:
+        - name: channel
+          in: body
+          description: channel spec
+          required: true
+          schema:
+            type: object
+            required:
+              - name
+              - isPrivate
+              - teamId
+            properties:
+              name:
+                type: string
+              isPrivate:
+                type: boolean
+              teamId:
+                type: string
+      responses:
+        '201':
+          description: Success
+          schema:
+            $ref: '#/definitions/ChannelModel'
+        default:
+          description: Error
+          schema:
+            $ref: '#/definitions/ErrorModel'
+    put:
+      tags:
+        - channel
+      summary: Update a channel
+      operationId: updateChannel
+      parameters:
+        - name: id
+          in: query
+          type: string
+          description: channel id
+          required: true
+        - name: channel
+          in: body
+          description: channel spec
+          required: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              isArchived:
+                type: boolean
+      responses:
+        '200':
+          description: Success
+          schema:
+            $ref: '#/definitions/ChannelModel'
+        default:
+          description: Error
+          schema:
+            $ref: '#/definitions/ErrorModel'
+  /channels:
+    get:
+      tags:
+        - channel
+      summary: Fetch all channels
+      operationId: fetchChannels
+      parameters:
+        - name: team_id
+          in: query
+          type: string
+          description: encoded team id to list channels in, required if token belongs to org-wide app
+      responses:
+        '200':
+          description: Success
+          schema:
+            $ref: '#/definitions/ChannelsModel'
+        default:
+          description: Error
+          schema:
+            $ref: '#/definitions/ErrorModel'
+definitions:
+  # model.Principal for security.ApiKey
+  Principal:
+    type: string
+  BaseModel:
+    type: object
+    required:
+      - ok
+      - request_id
+    properties:
+      ok:
+        type: boolean
+      request_id:
+        type: string
+        format: uuid
+  HealthModel:
+    allOf:
+      - $ref: '#/definitions/BaseModel'
+  ErrorModel:
+    allOf:
+      - $ref: '#/definitions/BaseModel'
+      - type: object
+        properties:
+          cause:
+            type: string
+          message:
+            type: string
+  Channel:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      isPrivate:
+        type: boolean
+      isArchived:
+        type: boolean
+  ChannelModel:
+    allOf:
+      - $ref: '#/definitions/BaseModel'
+      - type: object
+        required:
+          - channel
+        properties:
+          channel:
+            $ref: '#/definitions/Channel'
+  ChannelsModel:
+    allOf:
+      - $ref: '#/definitions/BaseModel'
+      - type: object
+        required:
+          - channels
+        properties:
+          channels:
+            type: array
+            items:
+              $ref: '#/definitions/Channel'
+securityDefinitions:
+  ApiKey:
+    type: apiKey
+    in: header
+    name: X-API-Key
+security:
+  - ApiKey: []
